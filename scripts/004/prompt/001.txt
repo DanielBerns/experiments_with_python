@@ -1,0 +1,134 @@
+### **Project Specification: Task Configuration & Reporting Website (Revised Design with Export)**
+
+This document outlines the technical specification for a web application designed to configure and monitor long-running tasks. The application is driven entirely by a central YAML configuration file, includes a robust user authorization system, and provides functionality to export configuration values to a local file.
+
+-----
+
+### **1. Core Architecture & Technology Stack**
+
+The application will be built using the following technologies:
+
+  * **Backend Framework**: Python 3 with **Flask**.
+  * **Authorization**: **Flask-Login** for managing user sessions and protecting routes. Passwords will be securely hashed using the **Werkzeug** library.
+  * **Database & ORM**: SQLite (for development) / PostgreSQL (for production) managed via **SQLAlchemy**.
+  * **Configuration Engine**: A single YAML file (`config.yaml`) will serve as the "source of truth."
+  * **Form Handling**: **Flask-WTF** will be used to dynamically generate configuration and login forms.
+  * **Frontend Styling**: **Tailwind CSS**.
+  * **Task Execution**: Asynchronous, non-blocking shell scripts.
+
+-----
+
+### **2. Configuration File (`config.yaml`)**
+
+The configuration file defines the site structure. All pages require login for auditing purposes.
+
+(`config.yaml`) Structure (this is an example):
+# This is the global title for the entire application, shown in the sidebar.
+toplevel_title: "My Awesome Project"
+
+# A list of all pages to be rendered by the application.
+pages:
+  # The first page in the list is the default homepage.
+  - slug: "toplevel"
+    title: "Global Settings"
+    description: "This is the main page of the application. It contains global settings that affect all tasks."
+    parameters:
+     - name: "version"
+       label: "Project Version"
+       type: "text" # Valid types: text, integer, boolean, select
+       default: "1.0"
+       required: true
+       help_text: "The semantic version of the project (e.g., 1.0)."
+     - name: "instance_name"
+       label: "Instance Name"
+       type: "text"
+       required: true
+       help_text: "A unique name for this running instance."
+     - name: "debug_mode"
+       label: "Enable Debug Mode"
+       type: "boolean"
+       default: false
+     - name: "logging_level"
+       label: "Logging Level"
+       type: "select"
+       options: ["debug", "info", "warning", "error", "critical"]
+       default: "info"
+
+  - slug: "data-processing"
+    title: "Data Processing Pipeline"
+    description: "This page handles the main data processing pipeline, from ingestion to final output."
+    parameters:
+     - name: "inputs_directory"
+       label: "Inputs Directory"
+       type: "text"
+       default: "/mnt/data/inputs"
+       required: true
+    buttons:
+     - name: "start_processing"
+       label: "Start Full Processing"
+       script_path: "scripts/processing/start.sh"
+       status_file: "app_data/status/processing_status.json"
+       report_path: "app_data/reports/processing/latest.html"
+
+  - slug: "database-backup"
+    title: "Database Backup"
+    description: "This page is for configuring and running database backups."
+    buttons:
+     - name: "run_backup"
+       label: "Run Backup Now"
+       script_path: "scripts/backup/start.sh"
+       status_file: "app_data/status/backup_status.json"
+       report_path: "app_data/reports/backup/latest.log"
+
+-----
+
+### **3. Database Schema (SQLAlchemy Models)**
+
+The schema includes tables for `User` credentials and `ConfigurationHistory` for auditing.
+
+  * **`User` Table**: Stores user account information and inherits from Flask-Login's `UserMixin`.
+
+      * **`id`** (Integer, Primary Key)
+      * **`username`** (String, Unique, Not Null)
+      * **`password_hash`** (String, Not Null): A securely generated hash of the user's password.
+
+  * **`ConfigurationHistory` Table**: Logs every parameter change.
+
+      * **`id`** (Integer, Primary Key)
+      * **`page_slug`** (String)
+      * **`parameter_name`** (String)
+      * **`value`** (Text)
+      * **`saved_at`** (DateTime)
+
+-----
+
+### **4. Application Flow and Logic**
+
+The application flow is updated to incorporate an authorization layer and a configuration export mechanism.
+
+  * **Authorization and Session Management**:
+
+    1.  **Login/Logout**: Dedicated routes (`/login`, `/logout`) will manage user authentication and sessions via Flask-Login.
+    2.  **Page Protection**: The application checks the `requires_login` flag for each page. If true, unauthenticated users are redirected to the login page.
+
+  * **Page Rendering**: The rendering logic remains the same, dynamically building pages from the `config.yaml` file.
+
+  * **Form Submission (Saving to Database)**: When the "Save Configuration" button is clicked, a `POST` request is sent to the page's URL. The backend validates the data and saves each parameter as a new entry in the `ConfigurationHistory` table.
+
+  * **Configuration Export to YAML (New Feature)**:
+
+    1.  **UI Components**: On any page with a configuration form, a new set of UI elements will be rendered alongside the "Save Configuration" button. This will include:
+          * A text input field for the user to enter their desired filename (e.g., "my-data-processing-settings").
+          * An "Export to YAML" button.
+    2.  **Frontend Action**: The "Export" button will be part of the same `<form>`. A hidden input field will be used to specify the action (e.g., `action: 'export'`), allowing the backend to differentiate between a "Save" and an "Export" request.
+    3.  **Backend Logic**:
+          * The form `POST` request will be handled by a dedicated export endpoint, such as `/page/<slug>/export`.
+          * The endpoint will receive all the current data from the form fields as well as the desired filename.
+          * It will create a Python dictionary from the form data, mapping parameter names to their current values.
+          * Using the **PyYAML** library, it will serialize this dictionary into a well-formatted YAML string.
+          * The application will then generate a Flask `Response` object containing the YAML string. Crucially, it will set the following HTTP headers:
+              * `Content-Type: text/yaml`
+              * `Content-Disposition: attachment; filename="<user-provided-name>.yaml"`
+          * This response is sent back to the browser, which will trigger a file download dialog, allowing the user to save the generated YAML file to their local machine.
+
+  * **Task Execution (Button Click)**: This flow is unchanged but remains protected by the authorization layer on secure pages.

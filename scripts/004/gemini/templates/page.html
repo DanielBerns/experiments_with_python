@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-white p-6 rounded-lg shadow-md">
+    <h2 class="text-3xl font-bold mb-2">{{ page.title }}</h2>
+    <p class="text-gray-600 mb-6">{{ page.description }}</p>
+
+    {% if form %}
+    <form method="POST" class="space-y-6">
+        {{ form.hidden_tag() }}
+        {{ form.action() }} {% for field in form if field.type not in ['CSRFTokenField', 'SubmitField', 'HiddenField'] and field.id != 'export_filename' %}
+        <div>
+            <label for="{{ field.id }}" class="block text-sm font-medium text-gray-700">{{ field.label }}</label>
+            {% if field.type == 'BooleanField' %}
+                <div class="mt-1">
+                    {{ field(class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded") }}
+                </div>
+            {% else %}
+                {{ field(class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm") }}
+            {% endif %}
+            {% if field.description %}
+            <p class="mt-2 text-sm text-gray-500">{{ field.description }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <hr class="my-6">
+
+        <div class="flex flex-wrap items-end gap-4">
+            <div>
+                 {{ form.save_submit(class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded cursor-pointer", onclick="document.getElementById('action').value='save';") }}
+            </div>
+
+            <div class="flex items-end gap-2 p-4 border rounded-md bg-gray-50">
+                <div>
+                    {{ form.export_filename.label(class="block text-sm font-medium text-gray-700") }}
+                    {{ form.export_filename(class="mt-1 block w-auto px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm") }}
+                </div>
+                <div>
+                     {{ form.export_submit(class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded cursor-pointer", onclick="document.getElementById('action').value='export';") }}
+                </div>
+            </div>
+        </div>
+    </form>
+    {% endif %}
+
+    {% if page.buttons %}
+    <div class="mt-8 border-t pt-6">
+        <h3 class="text-xl font-bold mb-4">Actions</h3>
+        <div id="buttons-container" class="space-x-4">
+            {% for button in page.buttons %}
+                <button onclick="runTask('{{ button.script_path }}')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded">
+                    {{ button.label }}
+                </button>
+            {% endfor %}
+        </div>
+        <div id="task-status" class="mt-4 p-2 text-sm"></div>
+    </div>
+
+    <script>
+    async function runTask(scriptPath) {
+        const statusDiv = document.getElementById('task-status');
+        statusDiv.textContent = `Starting task: ${scriptPath}...`;
+        statusDiv.className = 'mt-4 p-2 text-sm rounded bg-yellow-100 text-yellow-800';
+
+        try {
+            const response = await fetch("{{ url_for('run_task') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ script_path: scriptPath })
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                statusDiv.textContent = `Success: ${result.message}`;
+                statusDiv.className = 'mt-4 p-2 text-sm rounded bg-green-100 text-green-800';
+            } else {
+                statusDiv.textContent = `Error: ${result.message}`;
+                statusDiv.className = 'mt-4 p-2 text-sm rounded bg-red-100 text-red-800';
+            }
+        } catch (error) {
+            statusDiv.textContent = `Network Error: Could not start task. Is the server running?`;
+            statusDiv.className = 'mt-4 p-2 text-sm rounded bg-red-100 text-red-800';
+        }
+    }
+    </script>
+    {% endif %}
+
+</div>
+{% endblock %}

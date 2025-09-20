@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page.title if page else 'Login' }} - {{ config.toplevel_title }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #f8fafc; }
+        .sidebar { min-width: 250px; }
+    </style>
+</head>
+<body class="flex h-screen">
+
+    <aside class="sidebar bg-gray-800 text-white flex flex-col p-4">
+        <h1 class="text-2xl font-bold mb-6 border-b border-gray-600 pb-4">{{ config.toplevel_title }}</h1>
+        <nav class="flex-grow">
+            <ul>
+                {% for p in config.pages %}
+                <li class="mb-2">
+                    <a href="{{ url_for('render_page', slug=p.slug) }}"
+                       class="block py-2 px-4 rounded hover:bg-gray-700 {% if page and page.slug == p.slug %} bg-blue-600 font-bold {% endif %}">
+                        {{ p.title }}
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </nav>
+        {% if current_user.is_authenticated %}
+        <div class="mt-auto">
+             <p class="text-sm text-gray-400 px-4">User: {{ current_user.username }}</p>
+            <a href="{{ url_for('logout') }}" class="block text-center w-full py-2 px-4 rounded bg-red-600 hover:bg-red-700">
+                Logout
+            </a>
+        </div>
+        {% endif %}
+    </aside>
+
+    <main class="flex-1 p-8 overflow-y-auto">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="p-4 mb-4 text-sm text-{{ 'green' if category == 'success' else 'red' }}-700 bg-{{ 'green' if category == 'success' else 'red' }}-100 rounded-lg" role="alert">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+</body>
+</html>

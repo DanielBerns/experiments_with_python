@@ -1,0 +1,36 @@
+Project Prompt: Interactive Circuit Simulator Game
+
+Objective:
+Develop an interactive, game-like web application using Python and Streamlit to simulate a simple electric circuit. The primary goal is to engage a group of teenagers in a fun, educational experience during a visit to a university electronics lab. The application must be intuitive, easy to operate, and structured in a way that encourages exploration and code modification ("easy to hack").
+
+Core Features:
+
+1.  Circuit Simulation:
+    * The application must simulate a simple DC electrical circuit.
+    * The circuit will consist of a single voltage source in series with a voltage divider.
+    * The voltage divider is composed of two fixed resistances and one variable resistance.
+
+2.  User Interaction & Controls:
+    * Users must be able to set the values for all key components of the circuit via interactive widgets (e.g., sliders, number inputs).
+    * Configurable parameters include:
+        * The voltage of the power source.
+        * The resistance value of the two fixed resistors.
+        * The resistance value of the variable resistor.
+
+3.  Real-Time Data Display:
+    * The application must calculate and display critical circuit parameters in real-time as users adjust the inputs.
+    * Use "virtual instruments" (e.g., digital readouts, gauges) to show the following values:
+        * The total current flowing through the circuit.
+        * The voltage drop across each of the three resistances.
+        * The power dissipated by each component.
+
+4.  Visual Feedback and Gamification:
+    * Implement a visual warning system to make the experience more engaging.
+    * If the power dissipated in a resistor or wire exceeds a predefined safety threshold, its color in the circuit diagram must change (e.g., glow red) to indicate an "overload" or "burnout" condition.
+    * The user interface should be clean, visually appealing, and feature a clear diagram of the circuit that reflects the state of the components.
+
+Technical Specifications:
+
+* Language: Python
+* Framework: Streamlit
+* Code Style: The code should be well-commented and organized to be easily understandable for students who might want to inspect or modify it. The logic for the physics calculations (Ohm's Law, Power Law) should be explicit and clear.

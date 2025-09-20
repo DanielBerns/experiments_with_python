@@ -5,5 +5,14 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "flask>=3.1.1",
+    "flask-login>=0.6.3",
+    "flask-sqlalchemy>=3.1.1",
+    "flask-wtf>=1.2.2",
+    "langextract>=1.0.5",
+    "matplotlib>=3.10.6",
     "nicegui>=2.22.1",
+    "pyyaml>=6.0.2",
+    "schemdraw>=0.21",
+    "streamlit>=1.49.1",
 ]

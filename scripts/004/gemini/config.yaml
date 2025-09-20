@@ -1,0 +1,66 @@
+# This is the global title for the entire application, shown in the sidebar.
+toplevel_title: "Task Runner Pro"
+
+# A list of all pages to be rendered by the application.
+pages:
+  # The first page in the list is the default homepage.
+  - slug: "toplevel"
+    title: "Global Settings"
+    description: "This is the main page of the application. It contains global settings that affect all tasks."
+    # All pages require login for auditing purposes.
+    requires_login: true
+    parameters:
+      - name: "version"
+        label: "Project Version"
+        type: "text" # Valid types: text, integer, boolean, select
+        default: "1.0"
+        required: true
+        help_text: "The semantic version of the project (e.g., 1.0)."
+      - name: "instance_name"
+        label: "Instance Name"
+        type: "text"
+        required: true
+        help_text: "A unique name for this running instance."
+      - name: "debug_mode"
+        label: "Enable Debug Mode"
+        type: "boolean"
+        default: false
+      - name: "logging_level"
+        label: "Logging Level"
+        type: "select"
+        options: ["debug", "info", "warning", "error", "critical"]
+        default: "info"
+
+  - slug: "data-processing"
+    title: "Data Processing Pipeline"
+    description: "This page handles the main data processing pipeline, from ingestion to final output."
+    requires_login: true
+    parameters:
+      - name: "inputs_directory"
+        label: "Inputs Directory"
+        type: "text"
+        default: "inputs"
+        required: true
+      - name: "outputs_directory"
+        label: "Outputs Directory"
+        type: "text"
+        default: "outputs"
+        required: true
+
+    buttons:
+      - name: "start_processing"
+        label: "Start Full Processing"
+        script_path: "scripts/processing/start.sh"
+        status_file: "app_data/status/processing_status.json"
+        report_path: "app_data/reports/processing/latest.html"
+
+  - slug: "database-backup"
+    title: "Database Backup"
+    description: "This page is for configuring and running database backups."
+    requires_login: true
+    buttons:
+      - name: "run_backup"
+        label: "Run Backup Now"
+        script_path: "scripts/backup/start.sh"
+        status_file: "app_data/status/backup_status.json"
+        report_path: "app_data/reports/backup/latest.log"

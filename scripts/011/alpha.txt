@@ -1,0 +1,8 @@
+Please, consider the following list of sentences and prepare a complete prompt for developing software with python and streamlit.
+
+1. I want to simulate a simple electric circuit with one voltage source and a voltage divisor implemented with two fixed resistances and one variable resistance.
+2. The users can set the values of the voltage source, the fixed resistances and the variable resistance.
+3. The simulation must show virtual instruments displaying the value of the circuit current, voltage in each component, and dissipated power.
+4. The color of the resistances and wires must change if the dissipated power is too high.
+5. The goal of this simulation is to engage a group of teenagers in a game like experience during a visit to an electronic lab in the university,
+so the system must be easy to operate and hack.

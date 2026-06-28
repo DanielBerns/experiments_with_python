@@ -1,0 +1,20 @@
+1. I want to build a website, using python, Flask, and SQLAlchemy.
+2. I want the code of the website organized with blueprints.
+3. The users of the website have a username and password.
+4. One of the users is the admin user, with special rights and tasks. The other users have one and only one of two roles: clients and workers.
+4. The website is the interface between clients and workers.
+5. The workers are scripts with the task of generating a result (usually a results.yaml file), given a file parameters.yaml as input.
+6. The workers have a special identifier, with two parts named prefix and suffix (for example identifier "/formatter/alpha" with prefix="formatter", and suffix="alpha", or identifier "/searcher/bravo" with prefix="searcher" and suffix="bravo"). It is expected that workers with the same prefix have the same  parameters.yaml and help.md, but profile.md may be different.
+7) All the users can upload a file parameters.yaml to the website, assigning this file to a specific worker, and requesting a result.
+8) The website mantains requests queues for the workers, and responses store for the users.
+9) The worker uses an API of the website for
+    a) uploading three text files: profile.md, parameters.yaml and help.md. The file profile.md contains a brief explanation of the worker task, the file help.md contains an explanation of the content of parameters.yaml, and specify the legal values to be specified by other users (clients and workers).
+    b) downloading users requests, one by one, and generating a response for each request. A worker must not handle two or more simultaneous requests.
+    c) downloading profile.md and help.md by others workers.
+    d) downloading parameters.yaml of other workers, and uploading requests for other workers with different prefix in the special identifier.
+    e) querying for the states of requests to other workers.
+    f) downloading responses by other workers.
+10) Non workers users access to the list of workers, with links to profile.md, parameters.yaml, and help.md at a webpage in the website. This webpage must show stats about each worker (number of pending requests, mean time for generating a response, and the timestamp of the last response).
+11) Non workers users upload requests for workers (a parameters.yaml, and a full special identifier or the prefix of a special identifier).
+12) Non workers users query the states of their requests in a webpage.
+13) Non workers users downloads the responses of their requests in a webpage.

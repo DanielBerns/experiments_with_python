@@ -1,0 +1,18 @@
+.
+├── Makefile
+├── config.yaml
+├── .env
+└── ana/
+    ├── __init__.py
+    ├── main.py                 # FastAPI application (Driving Adapter)
+    ├── config.py               # Configuration loader
+    ├── logger.py               # Structured logging setup
+    ├── domain/                 # Core business logic & models
+    │   ├── events.py
+    │   └── engine.py
+    └── adapters/
+        ├── api/                # REST endpoints
+        │   └── routes.py
+        └── db/                 # Driven Adapters
+            ├── database.py
+            └── models.py       # SQLAlchemy models (Soft Delete & JSONB)

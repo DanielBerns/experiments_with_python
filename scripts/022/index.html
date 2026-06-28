@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- Essential for mobile PWAs to prevent unwanted zooming -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tagging Keyboard Prototype</title>
+    <style>
+        :root {
+            --bg-color: #f4f4f9;
+            --text-color: #333;
+            --primary-color: #0056b3;
+            --button-bg: #ffffff;
+            --button-border: #dcdcdc;
+            --keyboard-bg: #e2e4e8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 600px; /* Constrain width to simulate mobile on desktop */
+            margin: 0 auto;
+            border-left: 1px solid #ccc;
+            border-right: 1px solid #ccc;
+        }
+
+        /* The area where the generated tags will appear */
+        #output-area {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background-color: #fff;
+        }
+
+        .tag-paragraph {
+            background-color: #eef2f5;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid var(--primary-color);
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        /* The virtual keyboard interface */
+        #keyboard-area {
+            background-color: var(--keyboard-bg);
+            padding: 15px;
+            border-top: 1px solid #ccc;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        #breadcrumb {
+            font-size: 0.9rem;
+            color: #555;
+            min-height: 1.2rem;
+            font-weight: 500;
+        }
+
+        #keys-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        /* Full width for the back button */
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        button {
+            padding: 15px;
+            font-size: 1rem;
+            background-color: var(--button-bg);
+            border: 1px solid var(--button-border);
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: background-color 0.1s;
+            touch-action: manipulation; /* Optimizes touch responsiveness */
+        }
+
+        button:active {
+            background-color: #d0d0d0;
+            transform: scale(0.98);
+        }
+
+        .back-btn {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="output-area">
+        <!-- Selected tags will be appended here as paragraphs -->
+    </div>
+
+    <div id="keyboard-area">
+        <div id="breadcrumb">Path: </div>
+        <div id="keys-container">
+            <!-- Buttons injected via JavaScript -->
+        </div>
+    </div>
+
+    <script>
+        // 1. Define the Word Tree
+        // A null value indicates a leaf node.
+        const wordTree = {
+            "Location": {
+                "North": null,
+                "South": null,
+                "East": null,
+                "West": null
+            },
+            "Action": {
+                "Arrival": null,
+                "Departure": null,
+                "Inspection": {
+                    "Routine": null,
+                    "Emergency": null
+                }
+            },
+            "Status": {
+                "Clear": null,
+                "Delayed": null,
+                "Blocked": null
+            }
+        };
+
+        // 2. Application State
+        let currentPath = [];
+        let currentNode = wordTree;
+
+        // 3. DOM Elements
+        const keysContainer = document.getElementById('keys-container');
+        const breadcrumbEl = document.getElementById('breadcrumb');
+        const outputArea = document.getElementById('output-area');
+
+        // 4. Core Logic
+        function renderKeyboard() {
+            keysContainer.innerHTML = '';
+            
+            // Render Breadcrumb
+            breadcrumbEl.textContent = currentPath.length > 0 
+                ? `Path: ${currentPath.join(' > ')}` 
+                : 'Select a category...';
+
+            // Render Back Button if not at root
+            if (currentPath.length > 0) {
+                const backBtn = document.createElement('button');
+                backBtn.textContent = '← Back';
+                backBtn.className = 'back-btn full-width';
+                backBtn.onclick = handleBack;
+                keysContainer.appendChild(backBtn);
+            }
+
+            // Render current node options
+            const options = Object.keys(currentNode);
+            options.forEach(word => {
+                const btn = document.createElement('button');
+                btn.textContent = word;
+                btn.onclick = () => handleSelection(word);
+                keysContainer.appendChild(btn);
+            });
+        }
+
+        function handleSelection(word) {
+            currentPath.push(word);
+            const nextNode = currentNode[word];
+
+            if (nextNode === null) {
+                // Leaf node reached: generate the tag and reset
+                generateTag();
+                resetKeyboard();
+            } else {
+                // Navigate deeper into the tree
+                currentNode = nextNode;
+                renderKeyboard();
+            }
+        }
+
+        function handleBack() {
+            currentPath.pop(); // Remove last word
+            
+            // Re-traverse from root to find the new current node
+            currentNode = wordTree;
+            for (const word of currentPath) {
+                currentNode = currentNode[word];
+            }
+            
+            renderKeyboard();
+        }
+
+        function generateTag() {
+            const finalString = currentPath.join(' ');
+            
+            const p = document.createElement('p');
+            p.className = 'tag-paragraph';
+            p.textContent = finalString;
+            
+            outputArea.appendChild(p);
+            
+            // Auto-scroll to the bottom of the output area
+            outputArea.scrollTop = outputArea.scrollHeight;
+        }
+
+        function resetKeyboard() {
+            currentPath = [];
+            currentNode = wordTree;
+            renderKeyboard();
+        }
+
+        // Initialize the app
+        renderKeyboard();
+    </script>
+
+</body>
+</html>

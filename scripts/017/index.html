@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perpetual Solar Calendar Explorer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chosen Palette: "Calm Neutral" (Stone-50 BG, White Cards, Stone-700 Text, Cyan-600 Accent) -->
+    <!-- Application Structure Plan: A multi-view SPA ("Calendar Explorer") with a top navigation bar. Views: "Full Year" (12-month grid), "Seasonal View" (toggled 3-month views), "Holiday Finder" (table), "About" (rules & chart). This dashboard-like structure is chosen over a linear report to allow users to explore the calendar's components (months, seasons, holidays) in a non-linear, interactive way, which is best for understanding a *system* like a calendar. -->
+    <!-- Visualization & Content Choices: Calendar Structure -> Goal: Organize/Inform -> Viz: Dynamically generated HTML grids (Tailwind) -> Interaction: JS loops fill grids with days/weekdays -> Justification: Most intuitive way to view a calendar. Month Lengths -> Goal: Compare -> Viz: Bar Chart (Chart.js) -> Interaction: Hover tooltip -> Justification: Visually confirms the 30/30/31 pattern. Holidays -> Goal: Find/Inform -> Viz: HTML Table + CSS highlight in grid -> Interaction: Nav to "Holiday Finder" view -> Justification: Provides both quick lookup and in-context view. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .nav-btn {
+            @apply px-4 py-2 text-sm md:text-base font-medium text-stone-600 rounded-md transition-colors duration-200;
+        }
+        .nav-btn.active {
+            @apply bg-cyan-600 text-white shadow-md;
+        }
+        .nav-btn:not(.active):hover {
+            @apply bg-stone-200;
+        }
+        .view-content {
+            @apply p-4 md:p-6;
+        }
+        .weekday-header {
+            @apply grid grid-cols-7 gap-1 text-center text-xs font-semibold text-stone-500 mb-1;
+        }
+        .calendar-grid {
+            @apply grid grid-cols-7 gap-1;
+        }
+        .day-cell {
+            @apply text-center text-sm p-1 h-16 md:h-20 lg:h-24 border border-stone-200 bg-white rounded-sm flex flex-col justify-start items-center;
+        }
+        .day-cell-empty {
+            @apply border-stone-100 bg-stone-50 rounded-sm;
+        }
+        .day-number {
+            @apply font-bold text-stone-700;
+        }
+        .weekday-name {
+            @apply text-xs text-stone-400 hidden sm:block;
+        }
+        .day-cell.holiday {
+            @apply bg-cyan-50 border-cyan-200;
+        }
+        .holiday-name {
+            @apply text-[10px] md:text-xs text-cyan-700 font-medium leading-tight mt-1 overflow-hidden;
+        }
+    </style>
+</head>
+<body class="bg-stone-50 text-stone-800 font-sans leading-relaxed">
+
+    <div class="container mx-auto max-w-7xl p-4">
+
+        <header class="text-center my-6 md:my-10">
+            <h1 class="text-3xl md:text-4xl font-bold text-cyan-700">The Perpetual Solar Calendar</h1>
+            <p class="text-lg text-stone-600 mt-2">An interactive explorer for a balanced, perpetual calendar.</p>
+        </header>
+
+        <nav class="flex flex-wrap justify-center gap-2 md:gap-4 p-4 bg-white rounded-lg shadow-sm mb-6 md:mb-8 sticky top-4 z-10">
+            <button class="nav-btn active" data-view="full-year">Full Year</button>
+            <button class="nav-btn" data-view="seasonal">Seasonal View</button>
+            <button class="nav-btn" data-view="holidays">Holiday Finder</button>
+            <button class="nav-btn" data-view="about">About This Calendar</button>
+        </nav>
+
+        <main id="main-content" class="bg-white rounded-lg shadow-lg min-h-screen">
+
+            <div id="view-full-year" class="view-content">
+                <div class="text-center mb-6">
+                    <h2 class="text-2xl font-semibold text-cyan-700">Full Year at a Glance</h2>
+                    <p class="text-stone-600 mt-1">This view shows all 12 months in their four seasons. Notice the repeating 30, 30, 31 day pattern for each season.</p>
+                </div>
+                <div id="full-calendar-container" class="space-y-10"></div>
+                <div class="text-center p-6 bg-stone-100 rounded-lg mt-10">
+                    <h3 class="text-xl font-semibold text-cyan-700">The Year Days</h3>
+                    <p class="text-stone-600 mt-2">After the 364-day cycle, one or two special festive days are added to complete the solar year. These days exist outside of any week.</p>
+                    <div class="flex flex-wrap justify-center gap-4 mt-4">
+                        <div class="p-4 bg-white rounded-lg shadow-sm border border-cyan-200">
+                            <h4 class="font-bold text-stone-700">The Day of Celebration (Year Day 365)</h4>
+                            <p class="text-sm text-stone-600">The primary end-of-year festival.</p>
+                        </div>
+                        <div class="p-4 bg-white rounded-lg shadow-sm border border-cyan-200">
+                            <h4 class="font-bold text-stone-700">The Leap Day (Year Day 366)</h4>
+                            <p class="text-sm text-stone-600">Added every four years for renewal and service.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-seasonal" class="view-content hidden">
+                <div class="text-center mb-6">
+                    <h2 class="text-2xl font-semibold text-cyan-700">Seasonal View</h2>
+                    <p class="text-stone-600 mt-1">Explore the calendar one season at a time. Each season begins on a Solstice or Equinox and has a perfect 13-week (91-day) structure.</p>
+                </div>
+                <div class="flex flex-wrap justify-center gap-2 mb-6" id="season-selector">
+                </div>
+                <div id="seasonal-calendar-container" class="space-y-10">
+                </div>
+            </div>
+
+            <div id="view-holidays" class="view-content hidden">
+                <div class="text-center mb-6">
+                    <h2 class="text-2xl font-semibold text-cyan-700">Holiday Finder</h2>
+                    <p class="text-stone-600 mt-1">A complete list of all holidays in the Perpetual Solar Calendar. Since the calendar is fixed, these holidays always fall on the same date and weekday.</p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-white border border-stone-200 rounded-lg">
+                        <thead class="bg-stone-100">
+                            <tr>
+                                <th class="p-3 text-left text-sm font-semibold text-stone-600">Holiday Name</th>
+                                <th class="p-3 text-left text-sm font-semibold text-stone-600">Date</th>
+                                <th class="p-3 text-left text-sm font-semibold text-stone-600">Fixed Weekday</th>
+                            </tr>
+                        </thead>
+                        <tbody id="holiday-list-container">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="view-about" class="view-content hidden">
+                <div class="text-center mb-6">
+                    <h2 class="text-2xl font-semibold text-cyan-700">About This Calendar</h2>
+                    <p class="text-stone-600 mt-1">This calendar is a "perpetual" or "fixed" calendar, designed for symmetry and simplicity. Its primary benefit is that any given date always falls on the same day of the week, forever.</p>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-6 items-center">
+                    <div class="space-y-4">
+                        <div>
+                            <h3 class="text-xl font-semibold text-cyan-700 mb-2">Core Structure</h3>
+                            <ul class="list-disc list-inside text-stone-700 space-y-1">
+                                <li>**4 Seasons:** 91 days (13 weeks) each.</li>
+                                <li>**12 Months:** A repeating 30, 30, 31 day pattern per season.</li>
+                                <li>**364 Weekdays:** A perfect 52 weeks.</li>
+                                <li>**1-2 Year Days:** Festive days outside the weekly cycle.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-semibold text-cyan-700 mb-2">The Days of the Week</h3>
+                            <p class="text-stone-700 mb-2">The 7-day week is constant. The year always begins on Solis.</p>
+                            <ol class="list-decimal list-inside text-stone-700 space-y-1 font-medium">
+                                <li>Solis (Sun's Day)</li>
+                                <li>Luna (Moon's Day)</li>
+                                <li>Terra (Earth's Day)</li>
+                                <li>Maris (Sea's Day)</li>
+                                <li>Ventus (Wind's Day)</li>
+                                <li>Silva (Forest's Day)</li>
+                                <li>Astra (Star's Day)</li>
+                            </ol>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-semibold text-cyan-700 mb-2 text-center">Month Length Pattern</h3>
+                        <p class="text-stone-600 text-center mb-4">Each season follows an identical 30, 30, 31 day month pattern, which is visualized in this chart.</p>
+                        <div class="chart-container">
+                            <canvas id="monthLengthChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const calendarData = [
+                {
+                    season: "SUNCREST (Summer)",
+                    months: [
+                        { name: "Solara", days: 30 },
+                        { name: "Calida", days: 30 },
+                        { name: "Fructus", days: 31 }
+                    ]
+                },
+                {
+                    season: "HARVEST (Autumn)",
+                    months: [
+                        { name: "Messis", days: 30 },
+                        { name: "Folia", days: 30 },
+                        { name: "Bruma", days: 31 }
+                    ]
+                },
+                {
+                    season: "FROST (Winter)",
+                    months: [
+                        { name: "Nivis", days: 30 },
+                        { name: "Glacies", days: 30 },
+                        { name: "Silentis", days: 31 }
+                    ]
+                },
+                {
+                    season: "BLOOM (Spring)",
+                    months: [
+                        { name: "Veris", days: 30 },
+                        { name: "Germina", days: 30 },
+                        { name: "Vividia", days: 31 }
+                    ]
+                }
+            ];
+
+            const weekdays = ["Solis", "Luna", "Terra", "Maris", "Ventus", "Silva", "Astra"];
+
+            const holidays = [
+                { month: "Solara", day: 1, name: "The Solstice Feast", weekday: "Solis" },
+                { month: "Calida", day: 15, name: "High Sun Festival", weekday: "Terra" },
+                { month: "Fructus", day: 20, name: "First Harvest", weekday: "Terra" },
+                { month: "Messis", day: 1, name: "Equinox of Balance", weekday: "Solis" },
+                { month: "Folia", day: 24, name: "Ancestor's Eve", weekday: "Ventus" },
+                { month: "Bruma", day: 25, name: "The Great Gathering", weekday: "Solis" },
+                { month: "Nivis", day: 1, name: "The Long Night", weekday: "Solis" },
+                { month: "Glacies", day: 10, name: "Midwinter Feast", weekday: "Ventus" },
+                { month: "Silentis", day: 30, name: "Day of Stillness", weekday: "Silva" },
+                { month: "Veris", day: 1, name: "The First Bloom", weekday: "Solis" },
+                { month: "Germina", day: 12, name: "Festival of Waters", weekday: "Astra" },
+                { month: "Vividia", day: 15, name: "Day of Life", weekday: "Ventus" },
+            ];
+
+            const holidayMap = {};
+            holidays.forEach(h => {
+                holidayMap[`${h.month}-${h.day}`] = h.name;
+            });
+
+            const navButtons = document.querySelectorAll('.nav-btn');
+            const views = document.querySelectorAll('.view-content');
+
+            function handleNav(e) {
+                const viewId = e.target.dataset.view;
+
+                views.forEach(view => {
+                    if (view.id === `view-${viewId}`) {
+                        view.classList.remove('hidden');
+                    } else {
+                        view.classList.add('hidden');
+                    }
+                });
+
+                navButtons.forEach(btn => {
+                    if (btn.dataset.view === viewId) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+            }
+
+            navButtons.forEach(btn => btn.addEventListener('click', handleNav));
+
+            function createWeekdayHeader() {
+                const header = document.createElement('div');
+                header.className = 'weekday-header';
+                weekdays.forEach(day => {
+                    const dayEl = document.createElement('div');
+                    dayEl.textContent = day.substring(0, 3);
+                    header.appendChild(dayEl);
+                });
+                return header;
+            }
+
+            function createMonthGrid(month, startDayOfYear) {
+                const monthContainer = document.createElement('div');
+                monthContainer.className = 'p-4 bg-white rounded-lg border border-stone-200';
+
+                const title = document.createElement('h3');
+                title.className = 'text-xl font-semibold text-cyan-700 text-center mb-4';
+                title.textContent = month.name;
+                monthContainer.appendChild(title);
+
+                monthContainer.appendChild(createWeekdayHeader());
+
+                const grid = document.createElement('div');
+                grid.className = 'calendar-grid';
+
+                let startDayIndex = startDayOfYear % 7;
+                for (let i = 0; i < startDayIndex; i++) {
+                    const emptyCell = document.createElement('div');
+                    emptyCell.className = 'day-cell-empty';
+                    grid.appendChild(emptyCell);
+                }
+
+                for (let day = 1; day <= month.days; day++) {
+                    const dayCell = document.createElement('div');
+                    dayCell.className = 'day-cell';
+
+                    const dayOfYear = startDayOfYear + day - 1;
+                    const weekday = weekdays[dayOfYear % 7];
+
+                    const dayNum = document.createElement('span');
+                    dayNum.className = 'day-number';
+                    dayNum.textContent = day;
+                    dayCell.appendChild(dayNum);
+
+                    const weekName = document.createElement('span');
+                    weekName.className = 'weekday-name';
+                    weekName.textContent = weekday;
+                    dayCell.appendChild(weekName);
+
+                    const holiday = holidayMap[`${month.name}-${day}`];
+                    if (holiday) {
+                        dayCell.classList.add('holiday');
+                        const holidayEl = document.createElement('span');
+                        holidayEl.className = 'holiday-name';
+                        holidayEl.textContent = holiday;
+                        dayCell.appendChild(holidayEl);
+                    }
+
+                    grid.appendChild(dayCell);
+                }
+
+                monthContainer.appendChild(grid);
+                return monthContainer;
+            }
+
+            function renderFullCalendar() {
+                const container = document.getElementById('full-calendar-container');
+                container.innerHTML = '';
+                let dayOfYearCounter = 0;
+
+                calendarData.forEach(season => {
+                    const seasonSection = document.createElement('section');
+                    const seasonTitle = document.createElement('h2');
+                    seasonTitle.className = 'text-2xl font-semibold text-stone-700 mb-4 pb-2 border-b-2 border-cyan-100';
+                    seasonTitle.textContent = season.season;
+                    seasonSection.appendChild(seasonTitle);
+
+                    const monthsGrid = document.createElement('div');
+                    monthsGrid.className = 'grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6';
+
+                    season.months.forEach(month => {
+                        const monthEl = createMonthGrid(month, dayOfYearCounter);
+                        monthsGrid.appendChild(monthEl);
+                        dayOfYearCounter += month.days;
+                    });
+
+                    seasonSection.appendChild(monthsGrid);
+                    container.appendChild(seasonSection);
+                });
+            }
+
+            function renderSeasonalCalendar() {
+                const selector = document.getElementById('season-selector');
+                const container = document.getElementById('seasonal-calendar-container');
+                selector.innerHTML = '';
+                container.innerHTML = '';
+                let dayOfYearCounter = 0;
+
+                const seasonSections = {};
+
+                calendarData.forEach((season, index) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'nav-btn';
+                    if (index === 0) btn.classList.add('active');
+                    btn.textContent = season.season;
+                    btn.dataset.season = season.season;
+                    selector.appendChild(btn);
+
+                    const seasonSection = document.createElement('section');
+                    seasonSection.id = `season-${season.season}`;
+                    if(index > 0) seasonSection.classList.add('hidden');
+
+                    const monthsGrid = document.createElement('div');
+                    monthsGrid.className = 'grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6';
+
+                    let seasonDayCounter = dayOfYearCounter;
+                    season.months.forEach(month => {
+                        const monthEl = createMonthGrid(month, seasonDayCounter);
+                        monthsGrid.appendChild(monthEl);
+                        seasonDayCounter += month.days;
+                    });
+
+                    seasonSection.appendChild(monthsGrid);
+                    container.appendChild(seasonSection);
+
+                    dayOfYearCounter = seasonDayCounter;
+
+                    btn.addEventListener('click', (e) => {
+                        selector.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                        e.target.classList.add('active');
+
+                        container.querySelectorAll('section').forEach(s => {
+                            if (s.id === `season-${e.target.dataset.season}`) {
+                                s.classList.remove('hidden');
+                            } else {
+                                s.classList.add('hidden');
+                            }
+                        });
+                    });
+                });
+            }
+
+            function renderHolidayList() {
+                const container = document.getElementById('holiday-list-container');
+                container.innerHTML = '';
+                holidays.forEach(h => {
+                    const row = document.createElement('tr');
+                    row.className = 'border-b border-stone-200';
+
+                    const nameCell = document.createElement('td');
+                    nameCell.className = 'p-3 text-sm text-stone-700 font-medium';
+                    nameCell.textContent = h.name;
+
+                    const dateCell = document.createElement('td');
+                    dateCell.className = 'p-3 text-sm text-stone-600';
+                    dateCell.textContent = `${h.month} ${h.day}`;
+
+                    const weekdayCell = document.createElement('td');
+                    weekdayCell.className = 'p-3 text-sm text-stone-600';
+                    weekdayCell.textContent = h.weekday;
+
+                    row.appendChild(nameCell);
+                    row.appendChild(dateCell);
+                    row.appendChild(weekdayCell);
+                    container.appendChild(row);
+                });
+            }
+
+            function renderAboutChart() {
+                const ctx = document.getElementById('monthLengthChart').getContext('2d');
+                const labels = [];
+                const data = [];
+                calendarData.forEach(season => {
+                    season.months.forEach(month => {
+                        labels.push(month.name);
+                        data.push(month.days);
+                    });
+                });
+
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Days in Month',
+                            data: data,
+                            backgroundColor: [
+                                'rgba(22, 163, 74, 0.2)', 'rgba(22, 163, 74, 0.2)', 'rgba(22, 163, 74, 0.4)',
+                                'rgba(217, 119, 6, 0.2)', 'rgba(217, 119, 6, 0.2)', 'rgba(217, 119, 6, 0.4)',
+                                'rgba(6, 182, 212, 0.2)', 'rgba(6, 182, 212, 0.2)', 'rgba(6, 182, 212, 0.4)',
+                                'rgba(192, 38, 211, 0.2)', 'rgba(192, 38, 211, 0.2)', 'rgba(192, 38, 211, 0.4)'
+                            ],
+                            borderColor: [
+                                'rgba(22, 163, 74, 1)', 'rgba(22, 163, 74, 1)', 'rgba(22, 163, 74, 1)',
+                                'rgba(217, 119, 6, 1)', 'rgba(217, 119, 6, 1)', 'rgba(217, 119, 6, 1)',
+                                'rgba(6, 182, 212, 1)', 'rgba(6, 182, 212, 1)', 'rgba(6, 182, 212, 1)',
+                                'rgba(192, 38, 211, 1)', 'rgba(192, 38, 211, 1)', 'rgba(192, 38, 211, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            }
+
+            renderFullCalendar();
+            renderSeasonalCalendar();
+            renderHolidayList();
+            renderAboutChart();
+        });
+    </script>
+</body>
+</html>
